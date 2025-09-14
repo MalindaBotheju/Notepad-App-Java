@@ -1,33 +1,35 @@
-# Notepad App - Java Swing
+# Notepad App – Java Swing
 
 ## Overview
 
-A lightweight **Notepad application** built using **Java Swing**.  
-This project demonstrates GUI development, file I/O handling, and interactive component design in Java.
+This is a basic **Notepad application** built using **Java Swing**. It allows users to create, open, edit, and save text files. The app also supports features like Find & Replace, text formatting, and recently opened files.
 
-> Developed as part of an **Advanced Programming Techniques** assignment.
+> Developed for the *Advanced Programming Techniques* assignment.
 
 ## Features
 
-- Create new text documents
-- Open and edit existing `.txt` files
-- Save current work to file
+- Create new documents
+- Open existing `.txt` files
+- Save text files
+- Recently opened files (stored in `recent_files.txt`)
 - Cut / Copy / Paste
-- Find & Replace text within the document
-- Change text font and color
-- Displays **recently opened/saved files** (max 5)
-- Status bar shows cursor **line and column**
-- User-friendly GUI built entirely with Java Swing
-
-## ⚙Requirements
-
-- Java Development Kit (**JDK 8** or higher)
-- IDE (e.g., IntelliJ, Eclipse, NetBeans) or a terminal with `javac` and `java` commands
+- Find & Replace
+- Change font and text color
+- Status bar showing cursor position (line & column)
 
 ## Setup Instructions
 
-### Clone the Repository
+### Requirements
+- **Java Version:** Java 8 or later
 
-```bash
-git clone https://github.com/YourUsername/Notepad-App-Java.git
-cd Notepad-App-Java
+### How to Run
+
+#### Option 1: Using an IDE (Recommended)
+1. Open the `NotepadApp.java` file in your IDE (IntelliJ / Eclipse / NetBeans).
+2. Run the file directly.
+
+#### Option 2: Using Terminal / Command Prompt
+1. Navigate to the project folder.
+2. Compile the code:
+   ```bash
+   javac NotepadApp.java
