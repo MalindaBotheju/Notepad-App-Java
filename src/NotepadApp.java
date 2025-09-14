@@ -7,15 +7,16 @@ public class NotepadApp extends JFrame implements ActionListener {
     JTextArea textArea;
     JScrollPane scrollPane;
     JMenuBar menuBar;
-    JMenu fileMenu, editMenu;
+    JMenu fileMenu, editMenu, formatMenu;
     JMenuItem newItem, openItem, saveItem, exitItem;
-    JMenuItem cutItem, copyItem, pasteItem;
+    JMenuItem cutItem, copyItem, pasteItem, findReplaceItem;
+    JMenuItem fontItem, colorItem;
     JLabel statusLabel;
 
     public NotepadApp() {
         // Window setup
         setTitle("Notepad App");
-        setSize(600, 400);
+        setSize(700, 500);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         // Text area
@@ -49,18 +50,34 @@ public class NotepadApp extends JFrame implements ActionListener {
         cutItem = new JMenuItem("Cut");
         copyItem = new JMenuItem("Copy");
         pasteItem = new JMenuItem("Paste");
+        findReplaceItem = new JMenuItem("Find & Replace");
 
         cutItem.addActionListener(this);
         copyItem.addActionListener(this);
         pasteItem.addActionListener(this);
+        findReplaceItem.addActionListener(this);
 
         editMenu.add(cutItem);
         editMenu.add(copyItem);
         editMenu.add(pasteItem);
+        editMenu.addSeparator();
+        editMenu.add(findReplaceItem);
+
+        // Format Menu
+        formatMenu = new JMenu("Format");
+        fontItem = new JMenuItem("Font");
+        colorItem = new JMenuItem("Text Color");
+
+        fontItem.addActionListener(this);
+        colorItem.addActionListener(this);
+
+        formatMenu.add(fontItem);
+        formatMenu.add(colorItem);
 
         // Add menus to menu bar
         menuBar.add(fileMenu);
         menuBar.add(editMenu);
+        menuBar.add(formatMenu);
         setJMenuBar(menuBar);
 
         // Status bar
@@ -106,12 +123,54 @@ public class NotepadApp extends JFrame implements ActionListener {
             }
         } else if (e.getSource() == exitItem) {
             System.exit(0);
+
         } else if (e.getSource() == cutItem) {
             textArea.cut();
         } else if (e.getSource() == copyItem) {
             textArea.copy();
         } else if (e.getSource() == pasteItem) {
             textArea.paste();
+
+        } else if (e.getSource() == findReplaceItem) {
+            findReplaceDialog();
+
+        } else if (e.getSource() == fontItem) {
+            String fontName = JOptionPane.showInputDialog(this, "Enter font name (e.g., Arial, Times New Roman):");
+            String fontSizeStr = JOptionPane.showInputDialog(this, "Enter font size (e.g., 16):");
+            try {
+                int fontSize = Integer.parseInt(fontSizeStr);
+                textArea.setFont(new Font(fontName, Font.PLAIN, fontSize));
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Invalid font/size.");
+            }
+        } else if (e.getSource() == colorItem) {
+            Color newColor = JColorChooser.showDialog(this, "Choose Text Color", textArea.getForeground());
+            if (newColor != null) {
+                textArea.setForeground(newColor);
+            }
+        }
+    }
+
+    // Find & Replace dialog
+    private void findReplaceDialog() {
+        JPanel panel = new JPanel(new GridLayout(3, 2));
+        JTextField findField = new JTextField();
+        JTextField replaceField = new JTextField();
+
+        panel.add(new JLabel("Find:"));
+        panel.add(findField);
+        panel.add(new JLabel("Replace with:"));
+        panel.add(replaceField);
+
+        int option = JOptionPane.showConfirmDialog(this, panel, "Find & Replace", JOptionPane.OK_CANCEL_OPTION);
+        if (option == JOptionPane.OK_OPTION) {
+            String text = textArea.getText();
+            String find = findField.getText();
+            String replace = replaceField.getText();
+            if (!find.isEmpty()) {
+                textArea.setText(text.replace(find, replace));
+                statusLabel.setText("Replaced all occurrences of: " + find);
+            }
         }
     }
 
