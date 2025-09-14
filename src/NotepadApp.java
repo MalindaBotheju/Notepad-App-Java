@@ -4,7 +4,12 @@ import java.awt.event.*;
 import java.io.*;
 import java.util.*;
 
+
+
 public class NotepadApp extends JFrame implements ActionListener {
+
+    private static final String RECENT_FILES_STORAGE = "recent_files.txt";
+
     JTextArea textArea;
     JScrollPane scrollPane;
     JMenuBar menuBar;
@@ -96,6 +101,9 @@ public class NotepadApp extends JFrame implements ActionListener {
 
         recentMenu = new JMenu("Recent Files");
         fileMenu.add(recentMenu);  // add below Exit
+
+        loadRecentFiles();  // ✅ loads recent files when app starts
+
     }
 
     private void addRecentFile(String filePath) {
@@ -109,6 +117,7 @@ public class NotepadApp extends JFrame implements ActionListener {
         }
 
         updateRecentMenu();
+        saveRecentFiles();   // ✅ store to file
     }
 
     private void updateRecentMenu() {
@@ -130,6 +139,34 @@ public class NotepadApp extends JFrame implements ActionListener {
             statusLabel.setText("Opened: " + new File(filePath).getName());
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, "Error opening recent file.");
+        }
+    }
+
+    private void saveRecentFiles() {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(RECENT_FILES_STORAGE))) {
+            for (String path : recentFiles) {
+                bw.write(path);
+                bw.newLine();
+            }
+        } catch (IOException ex) {
+            System.err.println("Could not save recent files.");
+        }
+    }
+
+    private void loadRecentFiles() {
+        File file = new File(RECENT_FILES_STORAGE);
+        if (file.exists()) {
+            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (!line.trim().isEmpty()) {
+                        recentFiles.add(line.trim());
+                    }
+                }
+                updateRecentMenu();
+            } catch (IOException ex) {
+                System.err.println("Could not load recent files.");
+            }
         }
     }
 
