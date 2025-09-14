@@ -3,12 +3,14 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.util.*;
-
-
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class NotepadApp extends JFrame implements ActionListener {
-
-    private static final String RECENT_FILES_STORAGE = "recent_files.txt";
 
     JTextArea textArea;
     JScrollPane scrollPane;
@@ -95,29 +97,23 @@ public class NotepadApp extends JFrame implements ActionListener {
 
         // Update status bar on typing
         textArea.addCaretListener(e -> {
-            int pos = textArea.getCaretPosition();
-            statusLabel.setText("Cursor at: " + pos);
+            try {
+                int pos = textArea.getCaretPosition();
+                int line = textArea.getLineOfOffset(pos);
+                int col = pos - textArea.getLineStartOffset(line);
+                statusLabel.setText("Line: " + (line + 1) + ", Column: " + (col + 1));
+            } catch (Exception ex) {
+                statusLabel.setText("Ready");
+            }
         });
 
         recentMenu = new JMenu("Recent Files");
         fileMenu.add(recentMenu);  // add below Exit
 
-        loadRecentFiles();  // ✅ loads recent files when app starts
+        initializeDatabase();      // create DB if not exists
+        loadRecentFilesFromDB();   // load from DB
 
-    }
 
-    private void addRecentFile(String filePath) {
-        // Avoid duplicates
-        recentFiles.remove(filePath);
-        recentFiles.addFirst(filePath);
-
-        // Keep max 5 recent
-        if (recentFiles.size() > 5) {
-            recentFiles.removeLast();
-        }
-
-        updateRecentMenu();
-        saveRecentFiles();   // ✅ store to file
     }
 
     private void updateRecentMenu() {
@@ -142,32 +138,53 @@ public class NotepadApp extends JFrame implements ActionListener {
         }
     }
 
-    private void saveRecentFiles() {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(RECENT_FILES_STORAGE))) {
-            for (String path : recentFiles) {
-                bw.write(path);
-                bw.newLine();
-            }
-        } catch (IOException ex) {
-            System.err.println("Could not save recent files.");
+    private void initializeDatabase() {
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:notepad.db");
+             Statement stmt = conn.createStatement()) {
+
+            String createTableSQL = "CREATE TABLE IF NOT EXISTS recent_files (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "path TEXT NOT NULL UNIQUE," +
+                    "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP" +
+                    ");";
+
+            stmt.execute(createTableSQL);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
-    private void loadRecentFiles() {
-        File file = new File(RECENT_FILES_STORAGE);
-        if (file.exists()) {
-            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (!line.trim().isEmpty()) {
-                        recentFiles.add(line.trim());
-                    }
-                }
-                updateRecentMenu();
-            } catch (IOException ex) {
-                System.err.println("Could not load recent files.");
-            }
+    private void addRecentFileToDB(String filePath) {
+        String insertSQL = "INSERT OR REPLACE INTO recent_files (path, timestamp) VALUES (?, CURRENT_TIMESTAMP)";
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:notepad.db");
+             PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
+
+            pstmt.setString(1, filePath);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+
+        loadRecentFilesFromDB();  // Refresh UI
+    }
+
+    private void loadRecentFilesFromDB() {
+        recentFiles.clear();  // clear LinkedList
+        String querySQL = "SELECT path FROM recent_files ORDER BY timestamp DESC LIMIT 5";
+
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:notepad.db");
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(querySQL)) {
+
+            while (rs.next()) {
+                recentFiles.add(rs.getString("path"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        updateRecentMenu();  // Refresh menu items
     }
 
     @Override
@@ -186,7 +203,7 @@ public class NotepadApp extends JFrame implements ActionListener {
                         textArea.append(line + "\n");
                     }
                     statusLabel.setText("Opened: " + file.getName());
-                    addRecentFile(file.getAbsolutePath());  // ✅ FIXED: now adds to recent
+                    addRecentFileToDB(file.getAbsolutePath());
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(this, "Error opening file.");
                 }
@@ -199,7 +216,7 @@ public class NotepadApp extends JFrame implements ActionListener {
                 try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
                     bw.write(textArea.getText());
                     statusLabel.setText("Saved: " + file.getName());
-                    addRecentFile(file.getAbsolutePath());  // ✅ also add saved file to recent
+                    addRecentFileToDB(file.getAbsolutePath());
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(this, "Error saving file.");
                 }
