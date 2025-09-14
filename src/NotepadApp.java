@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.util.*;
 
 public class NotepadApp extends JFrame implements ActionListener {
     JTextArea textArea;
@@ -12,6 +13,9 @@ public class NotepadApp extends JFrame implements ActionListener {
     JMenuItem cutItem, copyItem, pasteItem, findReplaceItem;
     JMenuItem fontItem, colorItem;
     JLabel statusLabel;
+
+    JMenu recentMenu;
+    LinkedList<String> recentFiles = new LinkedList<>();
 
     public NotepadApp() {
         // Window setup
@@ -89,12 +93,51 @@ public class NotepadApp extends JFrame implements ActionListener {
             int pos = textArea.getCaretPosition();
             statusLabel.setText("Cursor at: " + pos);
         });
+
+        recentMenu = new JMenu("Recent Files");
+        fileMenu.add(recentMenu);  // add below Exit
+    }
+
+    private void addRecentFile(String filePath) {
+        // Avoid duplicates
+        recentFiles.remove(filePath);
+        recentFiles.addFirst(filePath);
+
+        // Keep max 5 recent
+        if (recentFiles.size() > 5) {
+            recentFiles.removeLast();
+        }
+
+        updateRecentMenu();
+    }
+
+    private void updateRecentMenu() {
+        recentMenu.removeAll();
+        for (String path : recentFiles) {
+            JMenuItem recentItem = new JMenuItem(path);
+            recentItem.addActionListener(e -> openRecentFile(path));
+            recentMenu.add(recentItem);
+        }
+    }
+
+    private void openRecentFile(String filePath) {
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            textArea.setText("");
+            String line;
+            while ((line = br.readLine()) != null) {
+                textArea.append(line + "\n");
+            }
+            statusLabel.setText("Opened: " + new File(filePath).getName());
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error opening recent file.");
+        }
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == newItem) {
             textArea.setText("");
+
         } else if (e.getSource() == openItem) {
             JFileChooser fileChooser = new JFileChooser();
             if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -106,10 +149,12 @@ public class NotepadApp extends JFrame implements ActionListener {
                         textArea.append(line + "\n");
                     }
                     statusLabel.setText("Opened: " + file.getName());
+                    addRecentFile(file.getAbsolutePath());  // ✅ FIXED: now adds to recent
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(this, "Error opening file.");
                 }
             }
+
         } else if (e.getSource() == saveItem) {
             JFileChooser fileChooser = new JFileChooser();
             if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -117,10 +162,12 @@ public class NotepadApp extends JFrame implements ActionListener {
                 try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
                     bw.write(textArea.getText());
                     statusLabel.setText("Saved: " + file.getName());
+                    addRecentFile(file.getAbsolutePath());  // ✅ also add saved file to recent
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(this, "Error saving file.");
                 }
             }
+
         } else if (e.getSource() == exitItem) {
             System.exit(0);
 
@@ -143,6 +190,7 @@ public class NotepadApp extends JFrame implements ActionListener {
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Invalid font/size.");
             }
+
         } else if (e.getSource() == colorItem) {
             Color newColor = JColorChooser.showDialog(this, "Choose Text Color", textArea.getForeground());
             if (newColor != null) {
@@ -150,6 +198,7 @@ public class NotepadApp extends JFrame implements ActionListener {
             }
         }
     }
+
 
     // Find & Replace dialog
     private void findReplaceDialog() {
